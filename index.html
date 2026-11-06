@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>AfterStack working prototype</title>
+<style>
+:root{
+  --paper:#f1ece1; --card:#fffdf7; --ink:#1b2a2e; --muted:#5a6669; --line:#cfc6b3; --edge:#1b2a2e;
+  --accent:#b4471a; --accent-soft:#f6e3d6; --ok:#2f6a4f;
+  --insp:#e4e9ec; --insp-line:#b9c4ca; --insp-ink:#1d2a33; --insp-head:#24323b;
+  --scan:#d9480f;
+  --serif: "Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans: system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono: ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html{background:var(--paper)}
+body{margin:0;font:17px/1.5 var(--sans);color:var(--ink);background:var(--paper)}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:1.5px solid var(--edge);background:#fff;border-radius:8px;padding:10px 14px;min-height:44px;font-weight:600}
+button:hover:not(:disabled){background:#f7f2e7}
+button:disabled{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:3px solid #2b6cb0;outline-offset:3px}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid #2b6cb0;outline-offset:3px}
+.scanned{outline:5px solid var(--scan)!important;outline-offset:4px!important;box-shadow:0 0 0 10px rgba(217,72,15,.18)!important}
+
+/* ---------- frame ---------- */
+.masthead{max-width:1320px;margin:0 auto;padding:26px 28px 10px;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 28px}
+.brand h1{margin:0;font:700 34px/1 var(--serif);letter-spacing:-.01em;display:flex;align-items:center;gap:12px}
+.brand h1::before{content:"";flex:none;width:20px;height:24px;margin:8px 10px 0 0;border:2px solid var(--edge);border-radius:3px;background:var(--card);box-shadow:4px -4px 0 -2px var(--card),4px -4px 0 0 var(--edge),8px -8px 0 -2px var(--card),8px -8px 0 0 var(--accent)}
+.brand p{margin:8px 0 0;max-width:640px}
+.brand small{display:block;margin-top:4px;color:var(--muted);font-size:14px}
+.layout{max-width:1320px;margin:0 auto;padding:12px 28px 40px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(340px,.85fr);gap:28px;align-items:start}
+
+/* ---------- player ---------- */
+.player{min-width:0}
+.stackbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;margin:0 0 16px}
+.stackbar label{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;color:var(--muted)}
+.stackbar select{border:1.5px solid var(--edge);border-radius:8px;padding:9px 12px;background:#fff;font-weight:600;color:var(--ink);min-height:44px}
+#stack-title{margin:0;font:600 15px/1.3 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.deck{position:relative;margin:0 10px 26px 0}
+.deck::before,.deck::after{content:"";position:absolute;inset:0;border:1.5px solid var(--edge);border-radius:14px;background:var(--card)}
+.deck::before{transform:translate(12px,12px);opacity:.55}
+.deck::after{transform:translate(6px,6px);opacity:.85}
+article{position:relative;z-index:1;background:var(--card);border:2px solid var(--edge);border-radius:14px;padding:30px 34px 28px;min-height:300px;display:flex;flex-direction:column}
+#card-title{margin:0 0 14px;font:700 30px/1.2 var(--serif);letter-spacing:-.01em;outline-offset:6px}
+#card-body{white-space:pre-wrap;line-height:1.65;font:19px/1.65 var(--serif);margin:0 0 22px;flex:1;max-width:62ch}
+#choices{display:flex;flex-direction:column;gap:10px}
+#choices:empty{display:none}
+#choices button{max-width:none;width:100%;text-align:left;padding:13px 16px 13px 44px;position:relative;font-weight:600;border-radius:10px;background:#fff}
+#choices button::before{content:"";position:absolute;left:16px;top:50%;width:14px;height:14px;margin-top:-7px;border-right:3px solid var(--accent);border-top:3px solid var(--accent);transform:rotate(45deg) translate(-3px,3px)}
+#choices button:hover{background:var(--accent-soft)}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.controls{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:10px;margin:0 0 12px}
+.controls .sep{flex:1}
+#scan{border-color:var(--scan);color:var(--scan)}
+.controls label{display:inline-flex;align-items:center;gap:8px;border:1.5px dashed var(--edge);border-radius:8px;padding:6px 10px;font-weight:600;font-size:15px;min-height:44px;background:#fff}
+.controls input[type=file]{font-size:13px;max-width:210px}
+#scan-choice{margin:0 0 8px;font-weight:700;color:var(--scan);min-height:1.5em}
+#scan-choice:empty{min-height:0;margin:0}
+#status{margin:0 0 10px;padding:12px 14px;background:#fff;border-left:5px solid var(--ok);border-radius:4px;font-size:15px;white-space:pre-wrap}
+#flags{margin:0;font:14px/1.5 var(--mono);color:var(--muted);padding:8px 12px;border:1px solid var(--line);border-radius:6px;background:rgba(255,255,255,.5);display:inline-block}
+
+/* ---------- inspector ---------- */
+.inspector{min-width:0;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto;border-radius:14px;background:var(--insp);border:1.5px solid var(--insp-line);color:var(--insp-ink);
+  background-image:linear-gradient(rgba(29,42,51,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(29,42,51,.045) 1px,transparent 1px);background-size:16px 16px}
+#editor-details>summary{position:sticky;top:0;z-index:2;list-style:none;cursor:pointer;background:var(--insp-head);color:#fff;padding:14px 18px;font:700 14px/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between;border-radius:12px 12px 0 0}
+#editor-details:not([open])>summary{border-radius:12px}
+#editor-details>summary::-webkit-details-marker{display:none}
+#editor-details>summary::after{content:"+";font-size:20px;line-height:1}
+#editor-details[open]>summary::after{content:"\2013"}
+#form-editor{border:0;background:transparent;padding:16px 18px 6px;margin:0}
+#form-editor h3{margin:0 0 4px;font:700 18px/1.3 var(--sans)}
+#fe-status{color:var(--accent);font-size:15px;font-weight:600;min-height:1.4em;margin:0 0 8px;white-space:pre-wrap}
+.fe-section{margin:12px 0;background:#fff;border:1px solid var(--insp-line);border-radius:10px;padding:0 14px}
+.fe-section>summary{cursor:pointer;font-weight:700;padding:12px 0;font-size:15px;list-style-position:inside}
+.fe-section[open]{padding-bottom:12px}
+.fe-section .fe-section{background:#f6f8f9;margin:10px 0 0}
+.fe-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:8px 0}
+.fe-row.top{align-items:flex-start}
+.fe-row label,.fe-row>span{min-width:92px;font-size:14px;font-weight:600;color:#3c4a52}
+.fe-row.top label{padding-top:9px}
+.fe-row input[type=text],.fe-row select,.fe-row textarea{flex:1;min-width:150px;padding:9px 10px;border:1.5px solid var(--insp-line);border-radius:7px;background:#fff;font-size:15px}
+.fe-row textarea{height:96px;resize:vertical;line-height:1.45}
+.fe-row button{padding:8px 12px;min-height:40px;font-size:14px}
+.fe-choice-list{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:8px}
+.fe-choice-list li{border:1px solid var(--insp-line);border-left:4px solid var(--insp-head);padding:8px 12px;margin:0;background:#fff;border-radius:6px;font-size:15px}
+.fe-flag-group{display:flex;flex-wrap:wrap;gap:6px 12px;margin:2px 0;flex:1}
+.fe-flag-group label{font:14px/1.3 var(--mono);display:flex;gap:6px;align-items:center;min-width:0;font-weight:500;color:var(--insp-ink)}
+.fe-flag-group input{width:18px;height:18px}
+#fe-new-choice-flags{font-size:14px;color:#3c4a52}
+.fe-actions{display:flex;flex-wrap:wrap;gap:8px;padding:12px 0 6px;margin-top:6px;border-top:1px dashed var(--insp-line)}
+#fe-play{background:var(--insp-head);color:#fff;border-color:var(--insp-head)}
+#fe-play:hover{background:#33454f}
+.json-tools{margin:12px 18px 18px}
+.json-tools p{font-size:14px;color:#3c4a52;margin:4px 0 8px}
+#editor{font:13px/1.45 var(--mono);width:100%;height:260px;padding:10px;border:1.5px solid var(--insp-line);border-radius:7px;background:#fbfcfc;margin:0 0 8px}
+.json-tools label{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-top:6px}
+.json-tools input[type=file]{font-size:13px;max-width:220px}
+
+@media (max-width:980px){
+  .layout{grid-template-columns:1fr;padding:8px 16px 32px;gap:22px}
+  .masthead{padding:18px 16px 6px}
+  .inspector{position:static;max-height:none;overflow:visible}
+  article{padding:22px 20px 20px;min-height:0}
+  #card-title{font-size:25px}
+  #card-body{font-size:17px}
+  .controls .sep{display:none}
+}
+@media (max-width:420px){.deck::before{transform:translate(8px,8px)}.deck::after{transform:translate(4px,4px)}.controls input[type=file]{max-width:170px}}
+@media (prefers-reduced-motion:no-preference){button{transition:background .12s}}
+</style>
+</head>
+<body>
+<header class="masthead">
+  <div class="brand">
+    <h1>AfterStack</h1>
+    <p>Make a little world out of linked cards. Play it offline, pass it to a friend, and change the rules.</p>
+    <p><small>Local working prototype · new JSON format inspired by HyperCard · original stories</small></p>
+  </div>
+</header>
+
+<div class="layout">
+<main class="player" aria-label="Player">
+  <div class="stackbar">
+    <label>Choose a stack <select id="stack-select">
+      <option value="0">The Last Lighthouse</option>
+      <option value="1">Circuit Garden</option>
+    </select></label>
+    <h2 id="stack-title"></h2>
+  </div>
+
+  <div class="deck">
+  <article>
+    <h3 id="card-title" tabindex="-1"></h3>
+    <p id="card-body"></p>
+    <div id="choices"></div>
+  </article>
+  </div>
+
+  <div class="toolbar controls">
+    <button id="undo">Undo</button>
+    <button id="restart">Restart</button>
+    <button id="scan">Start one-switch scan</button>
+    <span class="sep"></span>
+    <button id="save">Download save</button>
+    <label>Load save <input type="file" id="load" accept=".json"></label>
+  </div>
+  <p id="scan-choice" aria-live="polite"></p>
+  <p id="status" role="status"></p>
+  <p id="flags"></p>
+</main>
+
+<!-- ══ FORM EDITOR (authoring inspector) ═════════════════════════════════════ -->
+<aside class="inspector" aria-label="Authoring inspector">
+<details id="editor-details" open>
+<summary>Edit the stack</summary>
+
+<section id="form-editor" aria-label="Card editor">
+  <h3>Card editor</h3>
+  <p id="fe-status" aria-live="polite"></p>
+
+  <!-- Stack meta -->
+  <details class="fe-section" open>
+    <summary>Stack settings</summary>
+    <div class="fe-row">
+      <label for="fe-stack-title">Title</label>
+      <input type="text" id="fe-stack-title" maxlength="120">
+      <button id="fe-save-stack-meta">Save title</button>
+    </div>
+    <div class="fe-row">
+      <label for="fe-start">Start card</label>
+      <select id="fe-start"></select>
+      <button id="fe-save-start">Set start</button>
+    </div>
+    <div class="fe-row">
+      <label>Flags (comma-separated, letters/numbers/_-)</label>
+      <input type="text" id="fe-flags-input" placeholder="e.g. lens,charged,code">
+      <button id="fe-save-flags">Save flags</button>
+    </div>
+  </details>
+
+  <!-- Card picker -->
+  <details class="fe-section" open>
+    <summary>Edit a card</summary>
+    <div class="fe-row">
+      <label for="fe-card-select">Card</label>
+      <select id="fe-card-select"></select>
+      <button id="fe-remove-card">Remove card</button>
+    </div>
+    <div class="fe-row">
+      <label for="fe-card-title">Title</label>
+      <input type="text" id="fe-card-title" maxlength="120">
+    </div>
+    <div class="fe-row top">
+      <label for="fe-card-body">Body</label>
+      <textarea id="fe-card-body" maxlength="2000"></textarea>
+    </div>
+    <button id="fe-save-card">Save card title &amp; body</button>
+
+    <!-- Choice list for selected card -->
+    <div class="fe-section">
+      <strong>Choices on this card</strong>
+      <ul id="fe-choice-list" class="fe-choice-list"></ul>
+
+      <!-- Add choice -->
+      <details class="fe-section">
+        <summary>Add a choice</summary>
+        <div class="fe-row">
+          <label for="fe-new-choice-label">Label</label>
+          <input type="text" id="fe-new-choice-label" maxlength="120">
+        </div>
+        <div class="fe-row">
+          <label for="fe-new-choice-to">Goes to</label>
+          <select id="fe-new-choice-to"></select>
+        </div>
+        <div id="fe-new-choice-flags"></div>
+        <button id="fe-add-choice">Add choice</button>
+      </details>
+    </div>
+  </details>
+
+  <!-- Add card -->
+  <details class="fe-section">
+    <summary>Add a new card</summary>
+    <div class="fe-row">
+      <label for="fe-new-id">ID</label>
+      <input type="text" id="fe-new-id" maxlength="40" placeholder="letters, numbers, _ or -">
+    </div>
+    <div class="fe-row">
+      <label for="fe-new-title">Title</label>
+      <input type="text" id="fe-new-title" maxlength="120">
+    </div>
+    <div class="fe-row top">
+      <label for="fe-new-body">Body</label>
+      <textarea id="fe-new-body" maxlength="2000"></textarea>
+    </div>
+    <button id="fe-add-card">Add card</button>
+  </details>
+
+  <!-- Editor controls -->
+  <div class="toolbar fe-actions">
+    <button id="fe-undo">Undo editor change</button>
+    <button id="fe-play">Validate &amp; play this stack</button>
+  </div>
+</section>
+
+<!-- Advanced: raw JSON -->
+<details class="fe-section json-tools">
+  <summary>Advanced: raw JSON import / export</summary>
+  <p>Edit JSON directly, or import/export a file. Use "Validate &amp; play" above to load it.</p>
+  <textarea id="editor" aria-label="Stack JSON"></textarea><br>
+  <button id="apply">Validate and play from JSON</button>
+  <button id="export">Export stack JSON</button>
+  <label>Import stack file <input id="stack-import" type="file" accept=".json"></label>
+</details>
+
+</details>
+<!-- end editor-details -->
+</aside>
+</div>
+
+<script type="module" src="src/app.mjs"></script>
+</body>
+</html>

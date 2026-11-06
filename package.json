@@ -1,0 +1,14 @@
+{
+  "name": "afterstack",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/engine.test.mjs tests/editor.test.mjs",
+    "build": "node tools/build.mjs dist"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

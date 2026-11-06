@@ -1,0 +1,1016 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>AfterStack working prototype</title>
+<style>
+:root{
+  --paper:#f1ece1; --card:#fffdf7; --ink:#1b2a2e; --muted:#5a6669; --line:#cfc6b3; --edge:#1b2a2e;
+  --accent:#b4471a; --accent-soft:#f6e3d6; --ok:#2f6a4f;
+  --insp:#e4e9ec; --insp-line:#b9c4ca; --insp-ink:#1d2a33; --insp-head:#24323b;
+  --scan:#d9480f;
+  --serif: "Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans: system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono: ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html{background:var(--paper)}
+body{margin:0;font:17px/1.5 var(--sans);color:var(--ink);background:var(--paper)}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:1.5px solid var(--edge);background:#fff;border-radius:8px;padding:10px 14px;min-height:44px;font-weight:600}
+button:hover:not(:disabled){background:#f7f2e7}
+button:disabled{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:3px solid #2b6cb0;outline-offset:3px}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid #2b6cb0;outline-offset:3px}
+.scanned{outline:5px solid var(--scan)!important;outline-offset:4px!important;box-shadow:0 0 0 10px rgba(217,72,15,.18)!important}
+
+/* ---------- frame ---------- */
+.masthead{max-width:1320px;margin:0 auto;padding:26px 28px 10px;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 28px}
+.brand h1{margin:0;font:700 34px/1 var(--serif);letter-spacing:-.01em;display:flex;align-items:center;gap:12px}
+.brand h1::before{content:"";flex:none;width:20px;height:24px;margin:8px 10px 0 0;border:2px solid var(--edge);border-radius:3px;background:var(--card);box-shadow:4px -4px 0 -2px var(--card),4px -4px 0 0 var(--edge),8px -8px 0 -2px var(--card),8px -8px 0 0 var(--accent)}
+.brand p{margin:8px 0 0;max-width:640px}
+.brand small{display:block;margin-top:4px;color:var(--muted);font-size:14px}
+.layout{max-width:1320px;margin:0 auto;padding:12px 28px 40px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(340px,.85fr);gap:28px;align-items:start}
+
+/* ---------- player ---------- */
+.player{min-width:0}
+.stackbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;margin:0 0 16px}
+.stackbar label{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;color:var(--muted)}
+.stackbar select{border:1.5px solid var(--edge);border-radius:8px;padding:9px 12px;background:#fff;font-weight:600;color:var(--ink);min-height:44px}
+#stack-title{margin:0;font:600 15px/1.3 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.deck{position:relative;margin:0 10px 26px 0}
+.deck::before,.deck::after{content:"";position:absolute;inset:0;border:1.5px solid var(--edge);border-radius:14px;background:var(--card)}
+.deck::before{transform:translate(12px,12px);opacity:.55}
+.deck::after{transform:translate(6px,6px);opacity:.85}
+article{position:relative;z-index:1;background:var(--card);border:2px solid var(--edge);border-radius:14px;padding:30px 34px 28px;min-height:300px;display:flex;flex-direction:column}
+#card-title{margin:0 0 14px;font:700 30px/1.2 var(--serif);letter-spacing:-.01em;outline-offset:6px}
+#card-body{white-space:pre-wrap;line-height:1.65;font:19px/1.65 var(--serif);margin:0 0 22px;flex:1;max-width:62ch}
+#choices{display:flex;flex-direction:column;gap:10px}
+#choices:empty{display:none}
+#choices button{max-width:none;width:100%;text-align:left;padding:13px 16px 13px 44px;position:relative;font-weight:600;border-radius:10px;background:#fff}
+#choices button::before{content:"";position:absolute;left:16px;top:50%;width:14px;height:14px;margin-top:-7px;border-right:3px solid var(--accent);border-top:3px solid var(--accent);transform:rotate(45deg) translate(-3px,3px)}
+#choices button:hover{background:var(--accent-soft)}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.controls{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:10px;margin:0 0 12px}
+.controls .sep{flex:1}
+#scan{border-color:var(--scan);color:var(--scan)}
+.controls label{display:inline-flex;align-items:center;gap:8px;border:1.5px dashed var(--edge);border-radius:8px;padding:6px 10px;font-weight:600;font-size:15px;min-height:44px;background:#fff}
+.controls input[type=file]{font-size:13px;max-width:210px}
+#scan-choice{margin:0 0 8px;font-weight:700;color:var(--scan);min-height:1.5em}
+#scan-choice:empty{min-height:0;margin:0}
+#status{margin:0 0 10px;padding:12px 14px;background:#fff;border-left:5px solid var(--ok);border-radius:4px;font-size:15px;white-space:pre-wrap}
+#flags{margin:0;font:14px/1.5 var(--mono);color:var(--muted);padding:8px 12px;border:1px solid var(--line);border-radius:6px;background:rgba(255,255,255,.5);display:inline-block}
+
+/* ---------- inspector ---------- */
+.inspector{min-width:0;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto;border-radius:14px;background:var(--insp);border:1.5px solid var(--insp-line);color:var(--insp-ink);
+  background-image:linear-gradient(rgba(29,42,51,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(29,42,51,.045) 1px,transparent 1px);background-size:16px 16px}
+#editor-details>summary{position:sticky;top:0;z-index:2;list-style:none;cursor:pointer;background:var(--insp-head);color:#fff;padding:14px 18px;font:700 14px/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between;border-radius:12px 12px 0 0}
+#editor-details:not([open])>summary{border-radius:12px}
+#editor-details>summary::-webkit-details-marker{display:none}
+#editor-details>summary::after{content:"+";font-size:20px;line-height:1}
+#editor-details[open]>summary::after{content:"\2013"}
+#form-editor{border:0;background:transparent;padding:16px 18px 6px;margin:0}
+#form-editor h3{margin:0 0 4px;font:700 18px/1.3 var(--sans)}
+#fe-status{color:var(--accent);font-size:15px;font-weight:600;min-height:1.4em;margin:0 0 8px;white-space:pre-wrap}
+.fe-section{margin:12px 0;background:#fff;border:1px solid var(--insp-line);border-radius:10px;padding:0 14px}
+.fe-section>summary{cursor:pointer;font-weight:700;padding:12px 0;font-size:15px;list-style-position:inside}
+.fe-section[open]{padding-bottom:12px}
+.fe-section .fe-section{background:#f6f8f9;margin:10px 0 0}
+.fe-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:8px 0}
+.fe-row.top{align-items:flex-start}
+.fe-row label,.fe-row>span{min-width:92px;font-size:14px;font-weight:600;color:#3c4a52}
+.fe-row.top label{padding-top:9px}
+.fe-row input[type=text],.fe-row select,.fe-row textarea{flex:1;min-width:150px;padding:9px 10px;border:1.5px solid var(--insp-line);border-radius:7px;background:#fff;font-size:15px}
+.fe-row textarea{height:96px;resize:vertical;line-height:1.45}
+.fe-row button{padding:8px 12px;min-height:40px;font-size:14px}
+.fe-choice-list{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:8px}
+.fe-choice-list li{border:1px solid var(--insp-line);border-left:4px solid var(--insp-head);padding:8px 12px;margin:0;background:#fff;border-radius:6px;font-size:15px}
+.fe-flag-group{display:flex;flex-wrap:wrap;gap:6px 12px;margin:2px 0;flex:1}
+.fe-flag-group label{font:14px/1.3 var(--mono);display:flex;gap:6px;align-items:center;min-width:0;font-weight:500;color:var(--insp-ink)}
+.fe-flag-group input{width:18px;height:18px}
+#fe-new-choice-flags{font-size:14px;color:#3c4a52}
+.fe-actions{display:flex;flex-wrap:wrap;gap:8px;padding:12px 0 6px;margin-top:6px;border-top:1px dashed var(--insp-line)}
+#fe-play{background:var(--insp-head);color:#fff;border-color:var(--insp-head)}
+#fe-play:hover{background:#33454f}
+.json-tools{margin:12px 18px 18px}
+.json-tools p{font-size:14px;color:#3c4a52;margin:4px 0 8px}
+#editor{font:13px/1.45 var(--mono);width:100%;height:260px;padding:10px;border:1.5px solid var(--insp-line);border-radius:7px;background:#fbfcfc;margin:0 0 8px}
+.json-tools label{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-top:6px}
+.json-tools input[type=file]{font-size:13px;max-width:220px}
+
+@media (max-width:980px){
+  .layout{grid-template-columns:1fr;padding:8px 16px 32px;gap:22px}
+  .masthead{padding:18px 16px 6px}
+  .inspector{position:static;max-height:none;overflow:visible}
+  article{padding:22px 20px 20px;min-height:0}
+  #card-title{font-size:25px}
+  #card-body{font-size:17px}
+  .controls .sep{display:none}
+}
+@media (max-width:420px){.deck::before{transform:translate(8px,8px)}.deck::after{transform:translate(4px,4px)}.controls input[type=file]{max-width:170px}}
+@media (prefers-reduced-motion:no-preference){button{transition:background .12s}}
+</style>
+</head>
+<body>
+<header class="masthead">
+  <div class="brand">
+    <h1>AfterStack</h1>
+    <p>Make a little world out of linked cards. Play it offline, pass it to a friend, and change the rules.</p>
+    <p><small>Local working prototype · new JSON format inspired by HyperCard · original stories</small></p>
+  </div>
+</header>
+
+<div class="layout">
+<main class="player" aria-label="Player">
+  <div class="stackbar">
+    <label>Choose a stack <select id="stack-select">
+      <option value="0">The Last Lighthouse</option>
+      <option value="1">Circuit Garden</option>
+    </select></label>
+    <h2 id="stack-title"></h2>
+  </div>
+
+  <div class="deck">
+  <article>
+    <h3 id="card-title" tabindex="-1"></h3>
+    <p id="card-body"></p>
+    <div id="choices"></div>
+  </article>
+  </div>
+
+  <div class="toolbar controls">
+    <button id="undo">Undo</button>
+    <button id="restart">Restart</button>
+    <button id="scan">Start one-switch scan</button>
+    <span class="sep"></span>
+    <button id="save">Download save</button>
+    <label>Load save <input type="file" id="load" accept=".json"></label>
+  </div>
+  <p id="scan-choice" aria-live="polite"></p>
+  <p id="status" role="status"></p>
+  <p id="flags"></p>
+</main>
+
+<!-- ══ FORM EDITOR (authoring inspector) ═════════════════════════════════════ -->
+<aside class="inspector" aria-label="Authoring inspector">
+<details id="editor-details" open>
+<summary>Edit the stack</summary>
+
+<section id="form-editor" aria-label="Card editor">
+  <h3>Card editor</h3>
+  <p id="fe-status" aria-live="polite"></p>
+
+  <!-- Stack meta -->
+  <details class="fe-section" open>
+    <summary>Stack settings</summary>
+    <div class="fe-row">
+      <label for="fe-stack-title">Title</label>
+      <input type="text" id="fe-stack-title" maxlength="120">
+      <button id="fe-save-stack-meta">Save title</button>
+    </div>
+    <div class="fe-row">
+      <label for="fe-start">Start card</label>
+      <select id="fe-start"></select>
+      <button id="fe-save-start">Set start</button>
+    </div>
+    <div class="fe-row">
+      <label>Flags (comma-separated, letters/numbers/_-)</label>
+      <input type="text" id="fe-flags-input" placeholder="e.g. lens,charged,code">
+      <button id="fe-save-flags">Save flags</button>
+    </div>
+  </details>
+
+  <!-- Card picker -->
+  <details class="fe-section" open>
+    <summary>Edit a card</summary>
+    <div class="fe-row">
+      <label for="fe-card-select">Card</label>
+      <select id="fe-card-select"></select>
+      <button id="fe-remove-card">Remove card</button>
+    </div>
+    <div class="fe-row">
+      <label for="fe-card-title">Title</label>
+      <input type="text" id="fe-card-title" maxlength="120">
+    </div>
+    <div class="fe-row top">
+      <label for="fe-card-body">Body</label>
+      <textarea id="fe-card-body" maxlength="2000"></textarea>
+    </div>
+    <button id="fe-save-card">Save card title &amp; body</button>
+
+    <!-- Choice list for selected card -->
+    <div class="fe-section">
+      <strong>Choices on this card</strong>
+      <ul id="fe-choice-list" class="fe-choice-list"></ul>
+
+      <!-- Add choice -->
+      <details class="fe-section">
+        <summary>Add a choice</summary>
+        <div class="fe-row">
+          <label for="fe-new-choice-label">Label</label>
+          <input type="text" id="fe-new-choice-label" maxlength="120">
+        </div>
+        <div class="fe-row">
+          <label for="fe-new-choice-to">Goes to</label>
+          <select id="fe-new-choice-to"></select>
+        </div>
+        <div id="fe-new-choice-flags"></div>
+        <button id="fe-add-choice">Add choice</button>
+      </details>
+    </div>
+  </details>
+
+  <!-- Add card -->
+  <details class="fe-section">
+    <summary>Add a new card</summary>
+    <div class="fe-row">
+      <label for="fe-new-id">ID</label>
+      <input type="text" id="fe-new-id" maxlength="40" placeholder="letters, numbers, _ or -">
+    </div>
+    <div class="fe-row">
+      <label for="fe-new-title">Title</label>
+      <input type="text" id="fe-new-title" maxlength="120">
+    </div>
+    <div class="fe-row top">
+      <label for="fe-new-body">Body</label>
+      <textarea id="fe-new-body" maxlength="2000"></textarea>
+    </div>
+    <button id="fe-add-card">Add card</button>
+  </details>
+
+  <!-- Editor controls -->
+  <div class="toolbar fe-actions">
+    <button id="fe-undo">Undo editor change</button>
+    <button id="fe-play">Validate &amp; play this stack</button>
+  </div>
+</section>
+
+<!-- Advanced: raw JSON -->
+<details class="fe-section json-tools">
+  <summary>Advanced: raw JSON import / export</summary>
+  <p>Edit JSON directly, or import/export a file. Use "Validate &amp; play" above to load it.</p>
+  <textarea id="editor" aria-label="Stack JSON"></textarea><br>
+  <button id="apply">Validate and play from JSON</button>
+  <button id="export">Export stack JSON</button>
+  <label>Import stack file <input id="stack-import" type="file" accept=".json"></label>
+</details>
+
+</details>
+<!-- end editor-details -->
+</aside>
+</div>
+
+<script type="module">
+// AfterStack is a new, restricted card-stack format, not a HyperCard emulator.
+function validateStack(stack) {
+  const errors=[];
+  if(!stack || typeof stack !== 'object' || Array.isArray(stack)) return ['Stack must be an object.'];
+  if(typeof stack.title!=='string' || !stack.title.trim()) errors.push('A title is required.');
+  if(!Array.isArray(stack.cards) || stack.cards.length<1 || stack.cards.length>100) return [...errors,'Use 1–100 cards.'];
+  const ids=new Set();
+  for(const c of stack.cards){
+    if(typeof c.id!=='string' || !/^[a-z0-9_-]{1,40}$/i.test(c.id)) errors.push('Card ids use letters, numbers, _ or -.');
+    if(ids.has(c.id)) errors.push(`Duplicate card: ${c.id}`); ids.add(c.id);
+    if(typeof c.title!=='string'||typeof c.body!=='string') errors.push(`Card ${c.id} needs a title and body.`);
+    if(!Array.isArray(c.choices)||c.choices.length>8) errors.push(`Card ${c.id} must have 0–8 choices.`);
+  }
+  if(!ids.has(stack.start)) errors.push('Start card is missing.');
+  if(!Array.isArray(stack.flags)||stack.flags.length>16)errors.push('Declare at most 16 flags.');
+  const flags=new Set(Array.isArray(stack.flags)?stack.flags:[]);
+  if([...flags].some(f=>typeof f!=='string'||!/^[a-z0-9_-]{1,40}$/i.test(f))) errors.push('Invalid flag name.');
+  for(const c of stack.cards) for(const ch of Array.isArray(c.choices)?c.choices:[]){
+    if(!ch||typeof ch!=='object'){errors.push(`Invalid choice in ${c.id}.`);continue;}
+    if(typeof ch.label!=='string'||!ch.label.trim()) errors.push(`Empty choice in ${c.id}.`);
+    if(!ids.has(ch.to)) errors.push(`Broken link: ${c.id} → ${ch.to}`);
+    for(const field of ['require','forbid','set','clear']) if(ch[field]!==undefined && (!Array.isArray(ch[field])||ch[field].some(f=>!flags.has(f)))) errors.push(`Unknown flags in ${c.id}/${field}.`);
+  }
+  // Reachability ignores gates; a separate state-space pass checks reachable endings.
+  const seen=new Set(), queue=[stack.start];
+  while(queue.length){const id=queue.shift();if(seen.has(id))continue;seen.add(id);const c=stack.cards.find(c=>c.id===id);if(c&&Array.isArray(c.choices))for(const ch of c.choices)if(ch&&typeof ch==='object')queue.push(ch.to);}
+  for(const id of ids)if(!seen.has(id))errors.push(`Unreachable card: ${id}`);
+  return [...new Set(errors)];
+}
+
+class StackSession {
+  constructor(stack){const errors=validateStack(stack);if(errors.length)throw Error(errors.join('\n'));this.stack=structuredClone(stack);this.restart();}
+  restart(){this.cardId=this.stack.start;this.flags=new Set();this.history=[];return this.view();}
+  card(){return this.stack.cards.find(c=>c.id===this.cardId);}
+  choices(){return this.card().choices.filter(c=>(c.require||[]).every(x=>this.flags.has(x))&&(c.forbid||[]).every(x=>!this.flags.has(x)));}
+  view(){return {title:this.stack.title,card:structuredClone(this.card()),choices:structuredClone(this.choices()),flags:[...this.flags],steps:this.history.length};}
+  choose(index){
+    const options=this.choices();
+    if(!Number.isInteger(index)||index<0||index>=options.length)throw Error('Choice is not available.');
+    const c=options[index];this.history.push({cardId:this.cardId,flags:[...this.flags]});
+    for(const f of c.clear||[])this.flags.delete(f);for(const f of c.set||[])this.flags.add(f);this.cardId=c.to;return this.view();
+  }
+  back(){if(!this.history.length)return this.view();const old=this.history.pop();this.cardId=old.cardId;this.flags=new Set(old.flags);return this.view();}
+  save(){return JSON.stringify({version:1,stackId:this.stack.id,cardId:this.cardId,flags:[...this.flags],history:this.history});}
+  restore(raw){
+    const d=JSON.parse(raw);
+    const ids=new Set(this.stack.cards.map(c=>c.id)),fs=new Set(this.stack.flags||[]);
+    if(d.version!==1||d.stackId!==this.stack.id||!ids.has(d.cardId)||!Array.isArray(d.flags)||d.flags.some(f=>!fs.has(f))||!Array.isArray(d.history)||d.history.length>10000||d.history.some(h=>!ids.has(h.cardId)||!Array.isArray(h.flags)||h.flags.some(f=>!fs.has(f))))throw Error('Save file does not match this stack.');
+    this.cardId=d.cardId;this.flags=new Set(d.flags);this.history=structuredClone(d.history);return this.view();
+  }
+}
+
+function explore(stack,limit=10000){
+  const session=new StackSession(stack), queue=[session.save()], seen=new Set(), endings=new Set();
+  while(queue.length){
+    if(seen.size>=limit)throw Error('State-space limit reached.');
+    session.restore(queue.shift());const key=JSON.stringify([session.cardId,[...session.flags].sort()]);if(seen.has(key))continue;seen.add(key);
+    if(!session.choices().length)endings.add(session.cardId);
+    const before=session.save(),count=session.choices().length;for(let i=0;i<count;i++){session.restore(before);session.choose(i);queue.push(session.save());}
+  }
+  return {reachableStates:seen.size,endings:[...endings].sort()};
+}
+
+const lighthouse={id:'last-light',title:'The Last Lighthouse',start:'harbor',flags:['lens','code','charged'],cards:[
+{id:'harbor',title:'Two keepers, one light',body:'The lighthouse has gone dark. One keeper searches the shore; the other reads the keeper’s notebook. Pass the keyboard when the role changes. You can undo a move.',choices:[{label:'Search the shore',to:'shore'},{label:'Open the notebook',to:'notebook'}]},
+{id:'shore',title:'Shore keeper',body:'A polished glass lens lies beside an old hand generator. The generator is connected to nothing.',choices:[{label:'Take the lens and return',to:'harbor',set:['lens'],forbid:['lens']},{label:'Turn the generator to charge the battery',to:'harbor',set:['charged'],forbid:['charged']},{label:'Return to the harbor',to:'harbor'}]},
+{id:'notebook',title:'Notebook keeper',body:'Three flashes, then one. The tower opens at 31. A lamp needs a lens AND a charged battery. The next keeper can now take over.',choices:[{label:'Remember 31 and return',to:'harbor',set:['code']},{label:'Walk to the tower',to:'tower'}]},
+{id:'tower',title:'At the tower door',body:'The keypad waits. A wrong answer sends you back to the harbor; nothing is lost.',choices:[{label:'Enter 13',to:'harbor'},{label:'Enter 31',to:'lamp',require:['code']},{label:'Return to the harbor',to:'harbor'}]},
+{id:'lamp',title:'The silent lamp',body:'Fit the lens and connect the battery. Each missing part is a reason to return, not a timed failure.',choices:[{label:'Fit lens and connect battery',to:'ending',require:['lens','charged']},{label:'Return for the missing parts',to:'harbor'}]},
+{id:'ending',title:'A light across the bay',body:'The beam sweeps over the water. The two keepers made a working circuit: a source, a lamp, and the lens that directs the light. End of this fictional puzzle.',choices:[]}
+]};
+
+const circuit={id:'circuit-garden',title:'Circuit Garden',start:'gate',flags:['switch_a','switch_b'],cards:[
+{id:'gate',title:'Can you light both paths?',body:'This original learning puzzle models two switches in series. A light turns on only when A AND B are closed. This is a logic toy, not an electrical wiring guide.',choices:[{label:'Close switch A',to:'gate',set:['switch_a'],forbid:['switch_a']},{label:'Close switch B',to:'gate',set:['switch_b'],forbid:['switch_b']},{label:'Open switch A',to:'gate',clear:['switch_a'],require:['switch_a']},{label:'Open switch B',to:'gate',clear:['switch_b'],require:['switch_b']},{label:'Walk through the lit gate',to:'lit',require:['switch_a','switch_b']}]},
+{id:'lit',title:'Both switches are closed',body:'A AND B is true. Undo to change one switch and see the gate close again.',choices:[]}
+]};
+const stacks=[lighthouse,circuit];
+
+// AfterStack card/choice editor — pure state, no DOM, no network.
+// An EditorState wraps a mutable stack draft and its own undo history.
+// All mutations return a new EditorState; the original is never modified.
+// "commit" validates and returns the stack or an error list.
+
+/** Maximum undo steps kept for the editor */
+const MAX_EDITOR_UNDO = 50;
+
+/** ID syntax rule shared with the engine */
+const VALID_ID = /^[a-z0-9_-]{1,40}$/i;
+
+function cloneStack(s) { return JSON.parse(JSON.stringify(s)); }
+
+/**
+ * Create a fresh EditorState from an existing stack object.
+ * The stack is deep-cloned; the caller's copy is not affected.
+ */
+function createEditorState(stack) {
+  if (!stack || typeof stack !== 'object' || Array.isArray(stack))
+    throw new Error('stack must be an object');
+  return _make(cloneStack(stack), []);
+}
+
+function _make(draft, undoStack) {
+  return { draft, _undo: undoStack };
+}
+
+function _push(prev, nextDraft) {
+  const history = [cloneStack(prev.draft), ...prev._undo].slice(0, MAX_EDITOR_UNDO);
+  return _make(nextDraft, history);
+}
+
+/**
+ * Can undo?
+ */
+function canUndo(state) { return state._undo.length > 0; }
+
+/**
+ * Undo last editor mutation. Returns the previous EditorState.
+ * If there is nothing to undo, returns state unchanged.
+ */
+function undo(state) {
+  if (!state._undo.length) return state;
+  const [head, ...tail] = state._undo;
+  return _make(cloneStack(head), tail);
+}
+
+/**
+ * Edit the stack-level fields (title, start, flags).
+ * Pass only the fields you want to change.
+ */
+function editStackMeta(state, { title, start, flags } = {}) {
+  const d = cloneStack(state.draft);
+  if (title !== undefined) d.title = title;
+  if (start !== undefined) d.start = start;
+  if (flags !== undefined) {
+    if (!Array.isArray(flags)) throw new Error('flags must be an array');
+    if (flags.some(f => typeof f !== 'string' || !VALID_ID.test(f)))
+      throw new Error('Invalid flag name.');
+    if (new Set(flags).size !== flags.length) throw new Error('Duplicate flag name.');
+    if (flags.length > 16) throw new Error('Declare at most 16 flags.');
+    d.flags = flags.slice();
+  }
+  return _push(state, d);
+}
+
+/**
+ * Edit a card's title and/or body. cardId must exist.
+ */
+function editCard(state, cardId, { title, body } = {}) {
+  const d = cloneStack(state.draft);
+  const card = d.cards.find(c => c.id === cardId);
+  if (!card) throw new Error(`Card not found: ${cardId}`);
+  if (title !== undefined) card.title = title;
+  if (body !== undefined) card.body = body;
+  return _push(state, d);
+}
+
+/**
+ * Add a new card with the given id, title, and body.
+ * Rejects duplicate or invalid IDs.
+ */
+function addCard(state, { id, title = '', body = '' } = {}) {
+  if (typeof id !== 'string' || !VALID_ID.test(id))
+    throw new Error('Card ids use letters, numbers, _ or -.');
+  const d = cloneStack(state.draft);
+  if (d.cards.some(c => c.id === id))
+    throw new Error(`Duplicate card: ${id}`);
+  if (!Array.isArray(d.cards)) d.cards = [];
+  if (d.cards.length >= 100) throw new Error('Use 1–100 cards.');
+  d.cards.push({ id, title: String(title), body: String(body), choices: [] });
+  return _push(state, d);
+}
+
+/**
+ * Remove a card by id. Also removes all choices that point to it.
+ * Refuses to remove a card that is the current start if it is the only card.
+ */
+function removeCard(state, cardId) {
+  const d = cloneStack(state.draft);
+  const idx = d.cards.findIndex(c => c.id === cardId);
+  if (idx === -1) throw new Error(`Card not found: ${cardId}`);
+  if (d.cards.length <= 1) throw new Error('Cannot remove the only card.');
+  d.cards.splice(idx, 1);
+  // Remove dangling choices
+  for (const card of d.cards)
+    card.choices = (card.choices || []).filter(ch => ch.to !== cardId);
+  // Fix start if needed
+  if (d.start === cardId) d.start = d.cards[0].id;
+  return _push(state, d);
+}
+
+/**
+ * Add a choice to a card.
+ * label: string, to: existing card id, optional flag arrays.
+ */
+function addChoice(state, cardId, { label, to, require: req, forbid, set, clear } = {}) {
+  if (typeof label !== 'string' || !label.trim())
+    throw new Error('Choice label must not be empty.');
+  const d = cloneStack(state.draft);
+  const card = d.cards.find(c => c.id === cardId);
+  if (!card) throw new Error(`Card not found: ${cardId}`);
+  if (!d.cards.some(c => c.id === to))
+    throw new Error(`Target card not found: ${to}`);
+  if ((card.choices || []).length >= 8)
+    throw new Error(`Card ${cardId} already has 8 choices.`);
+  const flags = new Set(d.flags || []);
+  for (const [field, arr] of [['require', req], ['forbid', forbid], ['set', set], ['clear', clear]]) {
+    if (arr !== undefined) {
+      if (!Array.isArray(arr)) throw new Error(`${field} must be an array`);
+      for (const f of arr)
+        if (!flags.has(f)) throw new Error(`Unknown flag "${f}" in ${field}.`);
+    }
+  }
+  const choice = { label: label.trim(), to };
+  if (req && req.length) choice.require = req.slice();
+  if (forbid && forbid.length) choice.forbid = forbid.slice();
+  if (set && set.length) choice.set = set.slice();
+  if (clear && clear.length) choice.clear = clear.slice();
+  card.choices.push(choice);
+  return _push(state, d);
+}
+
+/**
+ * Remove a choice from a card by index.
+ */
+function removeChoice(state, cardId, choiceIndex) {
+  const d = cloneStack(state.draft);
+  const card = d.cards.find(c => c.id === cardId);
+  if (!card) throw new Error(`Card not found: ${cardId}`);
+  if (!Array.isArray(card.choices) || choiceIndex < 0 || choiceIndex >= card.choices.length)
+    throw new Error(`Choice index ${choiceIndex} out of range in card ${cardId}.`);
+  card.choices.splice(choiceIndex, 1);
+  return _push(state, d);
+}
+
+/**
+ * Edit a choice (label, to, flag arrays). Pass only fields to change.
+ */
+function editChoice(state, cardId, choiceIndex, updates = {}) {
+  const d = cloneStack(state.draft);
+  const card = d.cards.find(c => c.id === cardId);
+  if (!card) throw new Error(`Card not found: ${cardId}`);
+  if (!Array.isArray(card.choices) || choiceIndex < 0 || choiceIndex >= card.choices.length)
+    throw new Error(`Choice index ${choiceIndex} out of range in card ${cardId}.`);
+  const ch = card.choices[choiceIndex];
+  if (updates.label !== undefined) {
+    if (typeof updates.label !== 'string' || !updates.label.trim())
+      throw new Error('Choice label must not be empty.');
+    ch.label = updates.label.trim();
+  }
+  if (updates.to !== undefined) {
+    if (!d.cards.some(c => c.id === updates.to))
+      throw new Error(`Target card not found: ${updates.to}`);
+    ch.to = updates.to;
+  }
+  const flags = new Set(d.flags || []);
+  for (const field of ['require', 'forbid', 'set', 'clear']) {
+    if (updates[field] !== undefined) {
+      const arr = updates[field];
+      if (!Array.isArray(arr)) throw new Error(`${field} must be an array`);
+      for (const f of arr)
+        if (!flags.has(f)) throw new Error(`Unknown flag "${f}" in ${field}.`);
+      if (arr.length) ch[field] = arr.slice();
+      else delete ch[field];
+    }
+  }
+  return _push(state, d);
+}
+
+/**
+ * Validate and return the stack, or throw with the joined error list.
+ */
+function commit(state) {
+  const errors = validateStack(state.draft);
+  if (errors.length) throw new Error(errors.join('\n'));
+  return cloneStack(state.draft);
+}
+
+/**
+ * Return a read-only view of the current draft.
+ */
+function getDraft(state) { return cloneStack(state.draft); }
+
+const editorUndo = undo;
+const editorCanUndo = canUndo;
+const $ = s => document.querySelector(s);
+
+// ── Runtime state ─────────────────────────────────────────────────────────────
+let stack = stacks[0];
+let session = new StackSession(stack);
+
+// ── Scan state ────────────────────────────────────────────────────────────────
+let scanTimer = null;
+let scanItems = [];   // array of {label, el, action}
+let scanNext = 0;     // index of the item that will be highlighted on the NEXT tick
+let scanActive = -1;  // index of the item that IS currently highlighted (shown to user)
+                      // Space activates scanActive, not scanNext.
+
+function stopScan() {
+  clearInterval(scanTimer);
+  scanTimer = null;
+  $('#scan').textContent = 'Start one-switch scan';
+  document.querySelectorAll('.scanned').forEach(x => x.classList.remove('scanned'));
+  $('#scan-choice').textContent = '';
+  scanActive = -1;
+}
+
+// ── Runtime render ────────────────────────────────────────────────────────────
+function status(text) { $('#status').textContent = text; }
+
+function render() {
+  const view = session.view();
+  $('#stack-title').textContent = view.title;
+  $('#card-title').textContent = view.card.title;
+  $('#card-body').textContent = view.card.body;
+  $('#flags').textContent = 'Carried state: ' + (view.flags.join(', ') || 'none');
+
+  $('#choices').replaceChildren();
+  view.choices.forEach((choice, i) => {
+    const b = document.createElement('button');
+    b.textContent = choice.label;
+    b.dataset.choice = i;
+    b.onclick = () => { session.choose(i); render(); };
+    $('#choices').append(b);
+  });
+
+  $('#undo').disabled = !session.history.length;
+
+  if (!view.choices.length)
+    status('This stack has reached an ending. Restart or undo to explore another path.');
+  else
+    status(`${view.choices.length} choice${view.choices.length !== 1 ? 's' : ''}. Tab and Enter work throughout. Optional one-switch scan cycles choices + Undo + Restart; Space selects.`);
+
+  // Rebuild scan item list and re-highlight if scan is running
+  if (scanTimer) _rebuildAndHighlight();
+}
+
+// ── One-switch scan ───────────────────────────────────────────────────────────
+// Scans: all visible choices, then Undo (if available), Restart, Stop scan.
+function _buildScanItems() {
+  const items = [];
+  document.querySelectorAll('#choices button').forEach(b => {
+    items.push({ label: b.textContent, el: b, action: () => { b.click(); } });
+  });
+  if (!$('#undo').disabled)
+    items.push({ label: 'Undo', el: $('#undo'), action: () => { session.back(); render(); } });
+  items.push({ label: 'Restart', el: $('#restart'), action: () => { session.restart(); render(); } });
+  items.push({ label: 'Stop scan', el: null, action: () => stopScan() });
+  return items;
+}
+
+// Rebuild the item list after a state change and immediately show a highlight
+// on the same logical position, so the user always sees what Space will do.
+function _rebuildAndHighlight() {
+  const newItems = _buildScanItems();
+  // Try to keep the same position; clamp if the list shrank.
+  scanNext = Math.min(scanNext, newItems.length > 0 ? newItems.length - 1 : 0);
+  scanActive = Math.min(scanActive, newItems.length > 0 ? newItems.length - 1 : 0);
+  scanItems = newItems;
+  // Re-run a highlight pass so the visual and scanActive are both fresh.
+  _scanTick();
+  // Reset the interval timer so the next auto-advance is a full interval away,
+  // not an immediate double-tick.
+  clearInterval(scanTimer);
+  scanTimer = setInterval(_scanTick, 1800);
+}
+
+function _scanTick() {
+  document.querySelectorAll('.scanned').forEach(x => x.classList.remove('scanned'));
+  if (!scanItems.length) return;
+  scanNext %= scanItems.length;
+  scanActive = scanNext;                    // record what is now shown
+  const item = scanItems[scanActive];
+  if (item.el) item.el.classList.add('scanned');
+  $('#scan-choice').textContent = 'Highlighted: ' + item.label;
+  scanNext = (scanActive + 1) % scanItems.length;
+}
+
+$('#scan').onclick = () => {
+  if (scanTimer) { stopScan(); return; }
+  scanNext = 0;
+  scanActive = -1;
+  scanItems = _buildScanItems();
+  $('#scan').textContent = 'Stop one-switch scan';
+  _scanTick();
+  scanTimer = setInterval(_scanTick, 1800);
+};
+
+document.addEventListener('keydown', e => {
+  // Ignore key-repeat (held key) — only the first physical press fires.
+  if (e.repeat) return;
+  if (scanTimer && e.code === 'Space' && !['TEXTAREA', 'INPUT', 'SELECT'].includes(document.activeElement.tagName)) {
+    e.preventDefault();
+    // Activate the item that is currently highlighted (scanActive).
+    if (scanActive >= 0 && scanActive < scanItems.length) {
+      scanItems[scanActive].action();
+      // action() may call render() which calls _rebuildAndHighlight(),
+      // so scanActive/scanNext/scanItems are already updated by the time
+      // we return here — no further adjustment needed.
+    }
+  }
+});
+
+// ── Stack selector ────────────────────────────────────────────────────────────
+$('#stack-select').onchange = e => {
+  stopScan();
+  stack = stacks[Number(e.target.value)];
+  session = new StackSession(stack);
+  editorState = createEditorState(stack);
+  syncEditorForms();
+  $('#editor').value = JSON.stringify(stack, null, 2);
+  render();
+};
+
+// ── Runtime controls ──────────────────────────────────────────────────────────
+$('#undo').onclick = () => { session.back(); render(); };
+$('#restart').onclick = () => { session.restart(); render(); };
+
+// ── Save / load ───────────────────────────────────────────────────────────────
+function download(name, text, type = 'application/json') {
+  const url = URL.createObjectURL(new Blob([text], {type}));
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+$('#save').onclick = () => download('afterstack-save.json', session.save());
+
+$('#load').onchange = async e => {
+  try {
+    const file = e.target.files[0];
+    if (!file || file.size > 200000) throw Error('Choose a save file under 200KB.');
+    session.restore(await file.text());
+    render();
+  } catch (err) { status(err.message); }
+};
+
+// ── Raw-JSON editor (advanced) ────────────────────────────────────────────────
+$('#apply').onclick = () => {
+  try {
+    const candidate = JSON.parse($('#editor').value);
+    const errors = validateStack(candidate);
+    if (errors.length) throw Error(errors.join('\n'));
+    const result = explore(candidate);
+    if (!result.endings.length) throw Error('No reachable ending. Add an ending card.');
+    stack = candidate;
+    session = new StackSession(stack);
+    editorState = createEditorState(stack);
+    stopScan();
+    syncEditorForms();
+    render();
+    status(`Loaded ${stack.cards.length} cards; ${result.reachableStates} reachable states; endings: ${result.endings.join(', ')}.`);
+  } catch (err) { status(err.message); }
+};
+
+$('#export').onclick = () => download('afterstack-stack.json', JSON.stringify(stack, null, 2));
+
+$('#stack-import').onchange = async e => {
+  try {
+    const file = e.target.files[0];
+    if (!file || file.size > 200000) throw Error('Choose a stack under 200KB.');
+    $('#editor').value = await file.text();
+    $('#apply').click();
+  } catch (err) { status(err.message); }
+};
+
+// ══ FORM EDITOR ═══════════════════════════════════════════════════════════════
+
+let editorState = createEditorState(stack);
+
+function feStatus(msg) {
+  $('#fe-status').textContent = msg;
+}
+
+function feErr(fn) {
+  try { fn(); feStatus(''); }
+  catch (e) { feStatus(e.message); }
+}
+
+// Populate all selects and fields from editorState
+function syncEditorForms() {
+  const d = getDraft(editorState);
+
+  // Stack meta
+  $('#fe-stack-title').value = d.title || '';
+  _populateSelect($('#fe-start'), d.cards.map(c => ({ value: c.id, label: `${c.id} — ${c.title || '(no title)'}` })), d.start);
+
+  // Card select
+  _populateSelect($('#fe-card-select'), d.cards.map(c => ({ value: c.id, label: `${c.id} — ${c.title || '(no title)'}` })));
+
+  // Flags input
+  $('#fe-flags-input').value = (d.flags || []).join(', ');
+
+  // Sync card fields for currently selected card
+  _syncCardFields();
+  _syncChoiceTo();
+  _syncNewChoiceFlags();
+
+  // Undo button
+  $('#fe-undo').disabled = !editorCanUndo(editorState);
+}
+
+function _populateSelect(sel, options, selectedValue) {
+  const prev = selectedValue !== undefined ? selectedValue : sel.value;
+  sel.replaceChildren();
+  for (const { value, label } of options) {
+    const o = document.createElement('option');
+    o.value = value; o.textContent = label;
+    if (value === prev) o.selected = true;
+    sel.append(o);
+  }
+}
+
+function _syncCardFields() {
+  const d = getDraft(editorState);
+  const cardId = $('#fe-card-select').value;
+  const card = d.cards.find(c => c.id === cardId);
+  if (!card) return;
+  $('#fe-card-title').value = card.title || '';
+  $('#fe-card-body').value = card.body || '';
+  _renderChoiceList(card);
+}
+
+function _syncChoiceTo() {
+  const d = getDraft(editorState);
+  _populateSelect($('#fe-new-choice-to'), d.cards.map(c => ({ value: c.id, label: `${c.id} — ${c.title || '(no title)'}` })));
+}
+
+function _syncNewChoiceFlags() {
+  const d = getDraft(editorState);
+  const flags = d.flags || [];
+  const container = $('#fe-new-choice-flags');
+  container.replaceChildren();
+  if (!flags.length) {
+    container.textContent = '(No flags declared — add flags in Stack settings first.)';
+    return;
+  }
+  for (const field of ['require', 'forbid', 'set', 'clear']) {
+    const row = document.createElement('div');
+    row.className = 'fe-row';
+    const lbl = document.createElement('span');
+    lbl.style.minWidth = '90px';
+    lbl.textContent = field;
+    row.append(lbl);
+    const group = document.createElement('div');
+    group.className = 'fe-flag-group';
+    group.dataset.field = field;
+    for (const f of flags) {
+      const id = `fe-new-${field}-${f}`;
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.id = id; cb.dataset.flag = f;
+      const label = document.createElement('label');
+      label.htmlFor = id; label.textContent = f;
+      label.prepend(cb);
+      group.append(label);
+    }
+    row.append(group);
+    container.append(row);
+  }
+}
+
+function _renderChoiceList(card) {
+  const d = getDraft(editorState);
+  const flags = d.flags || [];
+  const list = $('#fe-choice-list');
+  list.replaceChildren();
+
+  if (!card.choices || !card.choices.length) {
+    const li = document.createElement('li');
+    li.textContent = '(no choices)';
+    list.append(li);
+    return;
+  }
+
+  card.choices.forEach((ch, idx) => {
+    const li = document.createElement('li');
+
+    // Label row
+    const labelRow = document.createElement('div');
+    labelRow.className = 'fe-row';
+    const labelInput = document.createElement('input');
+    labelInput.type = 'text'; labelInput.value = ch.label; labelInput.maxLength = 120;
+    labelInput.style.flex = '1'; labelInput.dataset.choiceIdx = idx; labelInput.dataset.field = 'label';
+    labelInput.setAttribute('aria-label', `Choice ${idx + 1} label`);
+    labelRow.append(Object.assign(document.createElement('span'), { textContent: 'Label', style: 'min-width:90px' }), labelInput);
+    li.append(labelRow);
+
+    // To row
+    const toRow = document.createElement('div');
+    toRow.className = 'fe-row';
+    const toSel = document.createElement('select');
+    toSel.dataset.choiceIdx = idx; toSel.dataset.field = 'to';
+    toSel.setAttribute('aria-label', `Choice ${idx + 1} target`);
+    _populateSelect(toSel, d.cards.map(c => ({ value: c.id, label: `${c.id} — ${c.title || '(no title)'}` })), ch.to);
+    toRow.append(Object.assign(document.createElement('span'), { textContent: 'Goes to', style: 'min-width:90px' }), toSel);
+    li.append(toRow);
+
+    // Flag rows
+    if (flags.length) {
+      for (const field of ['require', 'forbid', 'set', 'clear']) {
+        const flagRow = document.createElement('div');
+        flagRow.className = 'fe-row';
+        flagRow.append(Object.assign(document.createElement('span'), { textContent: field, style: 'min-width:90px' }));
+        const group = document.createElement('div');
+        group.className = 'fe-flag-group';
+        for (const f of flags) {
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = Array.isArray(ch[field]) && ch[field].includes(f);
+          cb.dataset.choiceIdx = idx; cb.dataset.field = field; cb.dataset.flag = f;
+          cb.setAttribute('aria-label', `${field} ${f}`);
+          const lbl = document.createElement('label');
+          lbl.textContent = f; lbl.prepend(cb);
+          group.append(lbl);
+        }
+        flagRow.append(group);
+        li.append(flagRow);
+      }
+    }
+
+    // Save / Remove buttons
+    const btnRow = document.createElement('div');
+    btnRow.className = 'fe-row';
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Save choice';
+    saveBtn.onclick = () => _saveChoiceFromRow(card.id, idx, li, flags);
+    const removeBtn = document.createElement('button');
+    removeBtn.textContent = 'Remove choice';
+    removeBtn.onclick = () => feErr(() => {
+      editorState = removeChoice(editorState, card.id, idx);
+      syncEditorForms();
+      feStatus(`Choice ${idx + 1} removed.`);
+    });
+    btnRow.append(saveBtn, removeBtn);
+    li.append(btnRow);
+
+    list.append(li);
+  });
+}
+
+function _saveChoiceFromRow(cardId, idx, li, flags) {
+  feErr(() => {
+    const labelInput = li.querySelector(`input[data-choice-idx="${idx}"][data-field="label"]`);
+    const toSel = li.querySelector(`select[data-choice-idx="${idx}"][data-field="to"]`);
+    const updates = { label: labelInput.value, to: toSel.value };
+    for (const field of ['require', 'forbid', 'set', 'clear']) {
+      const cbs = li.querySelectorAll(`input[data-choice-idx="${idx}"][data-field="${field}"]`);
+      if (cbs.length) updates[field] = [...cbs].filter(cb => cb.checked).map(cb => cb.dataset.flag);
+    }
+    editorState = editChoice(editorState, cardId, idx, updates);
+    syncEditorForms();
+    feStatus('Choice saved.');
+  });
+}
+
+// ── Form event handlers ───────────────────────────────────────────────────────
+
+$('#fe-card-select').onchange = () => _syncCardFields();
+
+$('#fe-save-stack-meta').onclick = () => feErr(() => {
+  editorState = editStackMeta(editorState, { title: $('#fe-stack-title').value });
+  syncEditorForms();
+  feStatus('Stack title saved.');
+});
+
+$('#fe-save-start').onclick = () => feErr(() => {
+  editorState = editStackMeta(editorState, { start: $('#fe-start').value });
+  syncEditorForms();
+  feStatus('Start card updated.');
+});
+
+$('#fe-save-flags').onclick = () => feErr(() => {
+  const raw = $('#fe-flags-input').value.trim();
+  const flags = raw ? raw.split(',').map(f => f.trim()).filter(Boolean) : [];
+  editorState = editStackMeta(editorState, { flags });
+  syncEditorForms();
+  feStatus('Flags saved.');
+});
+
+$('#fe-save-card').onclick = () => feErr(() => {
+  const cardId = $('#fe-card-select').value;
+  editorState = editCard(editorState, cardId, {
+    title: $('#fe-card-title').value,
+    body: $('#fe-card-body').value
+  });
+  syncEditorForms();
+  feStatus('Card saved.');
+});
+
+$('#fe-remove-card').onclick = () => feErr(() => {
+  const cardId = $('#fe-card-select').value;
+  if (!cardId) throw new Error('Select a card first.');
+  editorState = removeCard(editorState, cardId);
+  syncEditorForms();
+  feStatus(`Card "${cardId}" removed.`);
+});
+
+$('#fe-add-card').onclick = () => feErr(() => {
+  const id = $('#fe-new-id').value.trim();
+  const title = $('#fe-new-title').value;
+  const body = $('#fe-new-body').value;
+  editorState = addCard(editorState, { id, title, body });
+  $('#fe-new-id').value = '';
+  $('#fe-new-title').value = '';
+  $('#fe-new-body').value = '';
+  syncEditorForms();
+  feStatus(`Card "${id}" added.`);
+});
+
+$('#fe-add-choice').onclick = () => feErr(() => {
+  const cardId = $('#fe-card-select').value;
+  if (!cardId) throw new Error('Select a card first.');
+  const label = $('#fe-new-choice-label').value;
+  const to = $('#fe-new-choice-to').value;
+  const flagGroups = {};
+  for (const field of ['require', 'forbid', 'set', 'clear']) {
+    const cbs = document.querySelectorAll(`#fe-new-choice-flags [data-field="${field}"] input[type=checkbox]`);
+    flagGroups[field] = cbs.length ? [...cbs].filter(cb => cb.checked).map(cb => cb.dataset.flag) : undefined;
+  }
+  editorState = addChoice(editorState, cardId, { label, to, ...flagGroups });
+  $('#fe-new-choice-label').value = '';
+  syncEditorForms();
+  feStatus('Choice added.');
+});
+
+$('#fe-undo').onclick = () => feErr(() => {
+  if (!editorCanUndo(editorState)) throw new Error('Nothing to undo.');
+  editorState = editorUndo(editorState);
+  syncEditorForms();
+  feStatus('Editor change undone.');
+});
+
+$('#fe-play').onclick = () => {
+  try {
+    const candidate = commit(editorState);
+    const result = explore(candidate);
+    if (!result.endings.length) throw Error('No reachable ending. Add an ending card.');
+    stack = candidate;
+    session = new StackSession(stack);
+    stopScan();
+    $('#editor').value = JSON.stringify(stack, null, 2);
+    render();
+    feStatus('');
+    status(`Playing: ${stack.cards.length} cards; ${result.reachableStates} reachable states; endings: ${result.endings.join(', ')}.`);
+  } catch (e) { feStatus(e.message); }
+};
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+$('#editor').value = JSON.stringify(stack, null, 2);
+syncEditorForms();
+render();
+
+</script>
+</body>
+</html>
